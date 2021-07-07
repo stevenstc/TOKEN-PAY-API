@@ -2,12 +2,15 @@ const express = require('express')
 const bodyParser = require("body-parser");
 
 const fetch = require('node-fetch');
-
+const mongoose = require('mongoose');
 var TronWeb = require('tronweb');
 
 const app = express();
 const port = process.env.PORT || 3003;
+
 const token = process.env.APP_MT;
+const uri = process.env.APP_URI || "mongodb+srv://dbTronPay:sffN0hkxIIjyQ3Gw@cluster0.ztc71.mongodb.net/registro";
+
 const owner = process.env.APP_OWNER || "TB7RTxBPY4eMvKjceXj8SWjVnZCrWr4XvF";
 
 const tokenTRC20 = process.env.APP_TRC20 || "TDDkSxfkN5DbqXK3tHSZFXRMcT9aS6m9qz";
@@ -35,8 +38,30 @@ tronWeb = new TronWeb(
 
 tronWeb.setAddress('TEf72oNbP7AxDHgmb2iFrxE2t1NJaLjTv5');
 
+
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+
+const options = { useNewUrlParser: true, useUnifiedTopology: true };
+
+mongoose.connect(uri, options).then(
+  () => { console.log("Conectado Exitodamente!");},
+  err => { console.log(err); }
+);
+
+var transaccion = mongoose.model('transaccion', {
+    token: String,
+    id: Number,
+    timeStart: Number,
+    address: String,
+    privateKey: String,
+    value: Number,
+    usd: Number,
+    pay: Boolean,
+    payAt: Number
+
+});
 
 
 async function precioToken() {
@@ -45,17 +70,16 @@ async function precioToken() {
     .catch(error =>{console.error(error)})
     var json = await consulta.json();
 
-    var contractSITE = await tronWeb.contract().at(tokenTRC20);
+    
+    var balanceTRC20 = await contractTRC20.balanceOf(pool).call();
 
-    var balanceSITE = await contractSITE.balanceOf(pool).call();
-
-    balanceSITE = balanceSITE/100000000;
+    balanceTRC20 = balanceTRC20/100000000;
 
     var balanceTRX = await tronWeb.trx.getBalance(pool);
 
     balanceTRX = balanceTRX/1000000;
 
-    return (balanceTRX/balanceSITE)*json.data.trxPrice;
+    return (balanceTRX/balanceTRC20)*json.data.trxPrice;
 }
 
 async function precioTRX() {
@@ -100,10 +124,20 @@ app.get('/consultar/saldo/:direccion', async(req,res) => {
 
     var trxPrice = await precioTRX();
 
-    var precio = trxPrice*saldo;
+    var precioTron = trxPrice*saldo;
 
-    precio = precio.toFixed(2);
-    precio = parseFloat(precio);
+    precioTron = precioTron.toFixed(2);
+    precioTron = parseFloat(precioTron);
+
+    const contractTRC20 = await tronWeb.contract().at(tokenTRC20);
+
+    var saldoSite = await contractTRC20.balanceOf(cuenta).call();
+
+    saldoSite = saldoSite/100000000;
+
+    var sitePrice = 0.02; //await precioToken();
+
+    var precioSite = saldoSite*sitePrice;
 
     respuesta.network = network;
     respuesta.data = {
@@ -111,38 +145,77 @@ app.get('/consultar/saldo/:direccion', async(req,res) => {
       time: Date.now(),
       address: cuenta,
       balance:{
-        tron:saldo
+        tron:saldo,
+        site:saldoSite
       },
-      valueUsd: precio,
-      trxPrice: trxPrice
+      valueSiteUsd: precioSite,
+      valueTrxUsd: precioTron,
+      totalValue: precioSite+precioTron,
+      trxPrice: trxPrice,
+      sitePrice: sitePrice
 
     }
     res.status(200).send(respuesta);
 
 });
 
+app.get('/consultar/id/:id', async(req,res) => {
+
+    let id = req.params.id;
+
+    usuario = await transaccion.find({ id: id }, function (err, docs) {});
+    usuario = usuario[0];
+
+    res.send(usuario);
+
+});
+
 app.post('/generar/wallet', async(req,res) => {
 
     let token2 = req.body.token;
+    let usd = req.body.usd;
     let respuesta = {};
 
     if ( token == token2 ) {
 
       let cuenta = await tronWeb.createAccount();
 
-        respuesta.status = "200";
+        usuario = await transaccion.find({ token: "SITE" }, function (err, docs) {});
+        
+        console.log(usuario);
+
         respuesta.network = network;
         respuesta.data = {
-            time: Date.now(),
-            address: cuenta.address.base58,
-            privateKey: cuenta.privateKey
+            id: usuario.length,
+            timeStart: Date.now(),
+            address: cuenta.address.base58
           };
 
-        res.send(respuesta);
+        var sitePrice = 0.02; //await precioToken();
+
+        var transaccions = new transaccion({
+            token: "SITE",
+            id: usuario.length,
+            timeStart: Date.now(),
+            address: cuenta.address.base58,
+            privateKey: cuenta.privateKey,
+            value: parseFloat(usd)/sitePrice,
+            usd: parseFloat(usd),
+            priceSite: sitePrice,
+            pay: false,
+            payAt: 0
+
+        });
+
+        transaccions.save().then(() => {
+            respuesta.txt = "transacción creada exitodamente";
+
+            res.status(200).send(respuesta);
+        });
 
     }else{
         respuesta.txt = "No autorizado";
-        res.send(respuesta);
+        res.status(200).send(respuesta);
     }
 
 
@@ -178,17 +251,17 @@ app.post('/trasferir/owner', async(req,res) => {
           tron: saldo/1000000,
           from: tronCuenta.address.base58,
           to: owner,
-          id: id
+          txID: id
         };
 
-        res.send(respuesta);
+        res.status(200).send(respuesta);
 
     }else{
         respuesta.txt = "No autorizado";
         if (saldo = 0) {
           respuesta.txt = "No hay saldo para enviar";
         }
-        res.send(respuesta);
+        res.status(200).send(respuesta);
     }
 
 
