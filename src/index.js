@@ -18,14 +18,16 @@ const pool = process.env.APP_POOL || "TMSRvNWKUTvMBaTPFGStWVNtRUQJD72skU";
 
 const TRONGRID_API = process.env.APP_API || "https://api.trongrid.io";
 
-let network = "shasta";
+let network;
 
-if (TRONGRID_API == "https://api.shasta.trongrid.io") {
+if (TRONGRID_API == "https://api.trongrid.io") {
 
-  console.log("Esta api esta conectada en la red de pruebas para pasar a la red principal por favor establezaca la variable de entorno APP_API = https://api.trongrid.io en el archivo .env");
+  network = "MainNet - Trongrid";
+  console.log(TRONGRID_API);
 
 }else{
-  network = "trongrid";
+  network = "TestNet - Shasta";
+  console.log("Esta api esta conectada en la red de pruebas para pasar a la red principal por favor establezaca la variable de entorno APP_API = https://api.trongrid.io en el archivo .env");
   console.log(TRONGRID_API);
 }
 
