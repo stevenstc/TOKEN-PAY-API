@@ -65,14 +65,23 @@ var transaccion = mongoose.model('transaccion', {
 
 });
 
+var transaccion2 = mongoose.model('transaccion2', {
+  token: String,
+  id: Number,
+  timeStart: Number,
+  address: String,
+  value: Number,
+  usd: Number,
+  pay: Boolean,
+  payAt: Number
+
+});
+
 
 async function precioToken() {
 
-    let consulta = await fetch('https://api.just.network/swap/scan/statusinfo?exchangeAddress='+pool)
-    .catch(error =>{console.error(error)})
-    var json = await consulta.json();
+    var trxPrice = await precioTRX();
 
-    
     var balanceTRC20 = await contractTRC20.balanceOf(pool).call();
 
     balanceTRC20 = balanceTRC20/100000000;
@@ -81,12 +90,12 @@ async function precioToken() {
 
     balanceTRX = balanceTRX/1000000;
 
-    return (balanceTRX/balanceTRC20)*json.data.trxPrice;
+    return (balanceTRX/balanceTRC20)*trxPrice;
 }
 
 async function precioTRX() {
 
-    let consulta = await fetch('https://api.just.network/swap/scan/statusinfo?exchangeAddress='+pool)
+    let consulta = await fetch('https://api.just.network/swap/scan/statusinfo')
     .catch(error =>{console.error(error)})
     var json = await consulta.json();
 
@@ -96,7 +105,7 @@ async function precioTRX() {
 
 app.get('/', async(req,res) => {
 
-    res.send("Conectado TRON-PAY-API Exitodamente!");
+    res.status(200).send("Conectado TRON-PAY-API Exitodamente!");
 
 
 });
@@ -165,10 +174,28 @@ app.get('/consultar/id/:id', async(req,res) => {
 
     let id = req.params.id;
 
+    usuario = await transaccion2.find({ id: id }, function (err, docs) {});
+    usuario = usuario[0];
+
+    res.status(200).send(usuario);
+
+});
+
+app.post('/consultar/id/:id', async(req,res) => {
+
+  let id = req.params.id;
+  let token2 = req.body.token;
+
+  if ( token == token2 ) {
+
     usuario = await transaccion.find({ id: id }, function (err, docs) {});
     usuario = usuario[0];
 
-    res.send(usuario);
+    res.status(200).send(usuario);
+  }else{
+    respuesta.txt = "No autorizado";
+    res.status(200).send(respuesta);
+  }
 
 });
 
