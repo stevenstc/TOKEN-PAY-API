@@ -65,18 +65,6 @@ var transaccion = mongoose.model('transaccion', {
 
 });
 
-var transaccion2 = mongoose.model('transaccion2', {
-  token: String,
-  id: Number,
-  timeStart: Number,
-  address: String,
-  value: Number,
-  usd: Number,
-  pay: Boolean,
-  payAt: Number
-
-});
-
 
 async function precioToken() {
 
@@ -173,9 +161,9 @@ app.get('/consultar/saldo/:direccion', async(req,res) => {
 app.get('/consultar/id/:id', async(req,res) => {
 
     let id = req.params.id;
+    id = parseInt(id);
 
-    usuario = await transaccion2.find({ id: id }, function (err, docs) {});
-    usuario = usuario[0];
+    usuario = await transaccion.find({ id: id }, {"privateKey":0,"_id":0,"__v":0} );
 
     res.status(200).send(usuario);
 
@@ -199,6 +187,23 @@ app.post('/consultar/id/:id', async(req,res) => {
 
 });
 
+app.post('/consultar/transacciones', async(req,res) => {
+
+
+  let token2 = req.body.token;
+
+  if ( token == token2 ) {
+
+    usuario = await transaccion.find();
+
+    res.status(200).send(usuario);
+  }else{
+    respuesta.txt = "No autorizado";
+    res.status(200).send(respuesta);
+  }
+
+});
+
 app.post('/generar/wallet', async(req,res) => {
 
     let token2 = req.body.token;
@@ -211,8 +216,6 @@ app.post('/generar/wallet', async(req,res) => {
 
         usuario = await transaccion.find({ token: "SITE" }, function (err, docs) {});
         
-        console.log(usuario);
-
         respuesta.network = network;
         respuesta.data = {
             id: usuario.length,
@@ -296,4 +299,4 @@ app.post('/trasferir/owner', async(req,res) => {
 
 });
 
-app.listen(port, ()=> console.log('Escuchando Puerto: ' + port))
+app.listen(port, ()=> console.log('Corriendo en http://localhost:' + port))
