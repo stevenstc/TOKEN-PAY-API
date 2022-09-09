@@ -20,7 +20,7 @@ const TRONGRID_API = process.env.APP_API || "https://api.trongrid.io";
 
 let network;
 
-if (TRONGRID_API == "https://api.trongrid.io") {
+if (TRONGRID_API === "https://api.trongrid.io") {
 
   network = "MainNet - Trongrid";
   console.log(TRONGRID_API);
@@ -106,7 +106,7 @@ app.get('/precio', async(req,res) => {
         "ok": true,
         "message": "",
         "data": {
-            "price": Price
+          "price": Price
         }
     }
     res.status(200).send(response);
